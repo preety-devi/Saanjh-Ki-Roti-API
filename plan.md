@@ -45,7 +45,9 @@ Ordering add-ons,
 Making payments,
 Raising complaints
 
-## Functional Requirements
+## Project Requirements
+
+### Functional Requirements
 1. Customer Management
 
 * The system must allow:
@@ -72,11 +74,11 @@ Weekly Saver Plan,
 Diabetic Special Plan
 
 * Customers should be able to:
-*Subscribe
-*Renew
-*Pause
-*Resume
-*Cancel subscriptions
+Subscribe,
+Renew,
+Pause,
+Resume,
+Cancel subscriptions
 
 * Business rules:
 Maximum 7 pause days per billing cycle,
@@ -91,10 +93,10 @@ Diet-wise breakdown,
 Plan-wise breakdown
 
 * Categories include:
-*Veg
-*Non-Veg
-*Jain
-*Diabetic
+Veg,
+Non-Veg,
+Jain,
+Diabetic
 
 * The count should automatically exclude:
 Paused subscriptions,
@@ -140,8 +142,8 @@ Delivery boys should only access their assigned route.
 The system should generate bills automatically.
 
 * Billing schedules:
-*Monthly subscribers -> 1st of every month
-*Weekly subscribers -> Every Monday
+Monthly subscribers -> 1st of every month,
+Weekly subscribers -> Every Monday
 
 * Supported payment methods:
 -Cash
@@ -150,10 +152,10 @@ The system should generate bills automatically.
 
 * Business Rules:
 
--10% discount for early payment
--5% referral reward after referred customer completes first paid month
--Payment reminders sent 5 days before due date
--Subscription auto-pauses after 10 days of non-payment
+10% discount for early payment,
+5% referral reward after referred customer completes first paid month,
+Payment reminders sent 5 days before due date,
+Subscription auto-pauses after 10 days of non-payment
 
 7. Complaint Management
 
@@ -180,8 +182,8 @@ Compensation details
 | Medium   | 24 Hours        |
 | High     | 6 Hours         |
 
-8. Dashboard
 
+8. Dashboard
 The owner should have access to a dashboard displaying:
 
 * Daily Operations
@@ -214,7 +216,8 @@ The system should generate a monthly PDF report containing:
 
 Reports should be accessible for download and email delivery.
 
-## Non-Functional Requirements
+
+### Non-Functional Requirements
 * Security
 Role-based access control
 Secure authentication
@@ -255,3 +258,406 @@ Easy dashboard navigation
 - Route reassignment becomes necessary.
 - Customer cancels during an active billing period.
 - Delivery status not updated by delivery staff.
+
+## Implementation Plan
+
+| Phase   | Module                | Tasks                                                                             | Deliverable                       |
+| ------- | --------------------- | --------------------------------------------------------------------------------- | --------------------------------- |
+| Phase 1 | Project Setup         | Create repository, Configure FastAPI, Configure database, Create folder structure | Project skeleton ready            |
+| Phase 2 | Authentication Module | Login API, JWT Authentication, Role permissions                                   | Secure access system              |
+| Phase 3 | Customer Module       | Customer CRUD APIs, Document upload                                               | Customer management completed     |
+| Phase 4 | Subscription Module   | Plan APIs, Subscription APIs, Pause & Resume APIs                                 | Subscription management completed |
+| Phase 5 | Meal Planning Module  | Daily meal calculation, Diet wise summary                                         | Kitchen planning ready            |
+| Phase 6 | Delivery Module       | Route management, Delivery tracking, Retry handling                               | Delivery workflow completed       |
+| Phase 7 | Billing Module        | Bill generation, Payment tracking, Discounts, Auto pause                          | Billing workflow completed        |
+| Phase 8 | Complaint Module      | Complaint creation, Resolution workflow, Compensation tracking                    | Complaint management completed    |
+| Phase 9 | Dashboard & Reports   | Dashboard APIs, PDF report generation                                             | Analytics completed               |
+
+
+## Folder Structure
+
+saanjh_ki_roti_api/
+
+│
+├── app/
+│
+│   ├── api/
+│   │
+│   ├── models/
+│   │
+│   ├── schemas/
+│   │
+│   ├── services/
+│   │
+│   ├── repositories/
+│   │
+│   ├── core/
+│   │
+│   ├── database/
+│   │
+│   ├── utils/
+│   │
+│   ├── reports/
+│
+├── uploads/
+│
+├── tests/
+│
+├── requirements.txt
+│
+└── main.py
+
+
+## Files, Classes, Fields & Functions
+
+* main.py
+
+Purpose:
+Application entry point.
+
+Function: create_app()
+
+| Attribute | Details                     |
+| --------- | --------------------------- |
+| Input     | None                        |
+| Output    | FastAPI app                 |
+| Purpose   | Create application instance |
+
+
+* database/db.py
+
+Purpose:
+Database connection.
+
+Function: get_db()
+
+| Attribute | Details            |
+| --------- | ------------------ |
+| Input     | None               |
+| Output    | Database session   |
+| Purpose   | Provide DB session |
+
+
+## MODELS
+* customer.py
+### Class
+
+```python
+Customer
+```
+Fields
+
+| Field         | Type     |
+| ------------- | -------- |
+| id            | int      |
+| name          | str      |
+| phone         | str      |
+| address       | str      |
+| diet_type     | str      |
+| document_path | str      |
+| created_at    | datetime |
+
+Purpose:
+Stores customer information.
+
+* plan.py
+### Class
+
+```python
+Plan
+```
+Fields
+
+| Field         | Type  |
+| ------------- | ----- |
+| id            | int   |
+| name          | str   |
+| price         | float |
+| meal_type     | str   |
+| duration_days | int   |
+
+Purpose:
+Stores plan details.
+
+* subscription.py
+### Class
+
+```python
+Subscription
+```
+Fields
+
+| Field       | Type |
+| ----------- | ---- |
+| id          | int  |
+| customer_id | int  |
+| plan_id     | int  |
+| start_date  | date |
+| end_date    | date |
+| status      | str  |
+| paused_days | int  |
+
+Purpose:
+Stores subscription information.
+
+* delivery.py
+### Class
+
+```python
+Delivery
+```
+Fields
+
+| Field           | Type |
+| --------------- | ---- |
+| id              | int  |
+| customer_id     | int  |
+| route           | str  |
+| status          | str  |
+| delivery_boy_id | int  |
+
+Purpose:
+Stores delivery records.
+
+* payment.py
+### Class
+
+```python
+Payment
+```
+Fields
+
+| Field          | Type     |
+| -------------- | -------- |
+| id             | int      |
+| customer_id    | int      |
+| amount         | float    |
+| payment_method | str      |
+| paid_at        | datetime |
+
+Purpose:
+Stores payment records
+
+* complaint.py
+### Class
+
+```python
+Complaint
+```
+Fields
+
+| Field       | Type |
+| ----------- | ---- |
+| id          | int  |
+| customer_id | int  |
+| type        | str  |
+| severity    | str  |
+| description | str  |
+| status      | str  |
+
+Purpose:
+Stores complaints
+
+
+## SERVICES
+** customer_service.py
+* create_customer()
+| Attribute | Details         |
+| --------- | --------------- |
+| Input     | Customer data   |
+| Output    | Customer object |
+| Purpose   | Create customer |
+
+* get_customer()
+| Attribute | Details        |
+| --------- | -------------- |
+| Input     | Customer ID    |
+| Output    | Customer       |
+| Purpose   | Fetch customer |
+
+* update_customer()
+| Attribute | Details            |
+| --------- | ------------------ |
+| Input     | Customer ID + data |
+| Output    | Updated customer   |
+| Purpose   | Update customer    |
+
+* delete_customer()
+| Attribute | Details             |
+| --------- | ------------------- |
+| Input     | Customer ID         |
+| Output    | Success message     |
+| Purpose   | Deactivate customer |
+
+** subscription_service.py
+* create_subscription()
+| Attribute | Details               |
+| --------- | --------------------- |
+| Input     | Customer ID + Plan ID |
+| Output    | Subscription          |
+| Purpose   | Create subscription   |
+
+* pause_subscription()
+| Attribute | Details             |
+| --------- | ------------------- |
+| Input     | Subscription ID     |
+| Output    | Paused subscription |
+| Purpose   | Pause subscription  |
+
+* resume_subscription()
+| Attribute | Details             |
+| --------- | ------------------- |
+| Input     | Subscription ID     |
+| Output    | Active subscription |
+| Purpose   | Resume subscription |
+
+* validate_pause_limit()
+| Attribute | Details           |
+| --------- | ----------------- |
+| Input     | Subscription ID   |
+| Output    | Boolean           |
+| Purpose   | Check pause limit |
+
+** meal_service.py
+* generate_daily_meal_count()
+| Attribute | Details               |
+| --------- | --------------------- |
+| Input     | Date                  |
+| Output    | Meal summary          |
+| Purpose   | Calculate daily meals |
+
+** addon_service.py
+* create_addon_order()
+| Attribute | Details               |
+| --------- | --------------------- |
+| Input     | Customer ID + Addon   |
+| Output    | Addon order           |
+| Purpose   | Create add-on request |
+
+* validate_cutoff_time()
+| Attribute | Details           |
+| --------- | ----------------- |
+| Input     | Current time      |
+| Output    | Boolean           |
+| Purpose   | Check 9 AM cutoff |
+
+** delivery_service.py
+
+* assign_delivery()
+| Attribute | Details             |
+| --------- | ------------------- |
+| Input     | Delivery ID         |
+| Output    | Assigned delivery   |
+| Purpose   | Assign delivery boy |
+
+
+* update_status()
+| Attribute | Details                |
+| --------- | ---------------------- |
+| Input     | Delivery ID + Status   |
+| Output    | Updated delivery       |
+| Purpose   | Update delivery status |
+
+
+* retry_failed_delivery()
+| Attribute | Details          |
+| --------- | ---------------- |
+| Input     | Delivery ID      |
+| Output    | Updated delivery |
+| Purpose   | Schedule retry   |
+
+
+** billing_service.py
+* generate_bill()
+| Attribute | Details       |
+| --------- | ------------- |
+| Input     | Customer ID   |
+| Output    | Bill          |
+| Purpose   | Generate bill |
+
+* apply_discount()
+| Attribute | Details         |
+| --------- | --------------- |
+| Input     | Bill            |
+| Output    | Updated bill    |
+| Purpose   | Apply discounts |
+
+* send_payment_reminder()
+| Attribute | Details       |
+| --------- | ------------- |
+| Input     | Customer ID   |
+| Output    | Notification  |
+| Purpose   | Send reminder |
+
+** complaint_service.py
+* create_complaint()
+| Attribute | Details          |
+| --------- | ---------------- |
+| Input     | Complaint data   |
+| Output    | Complaint        |
+| Purpose   | Create complaint |
+
+* resolve_complaint()
+| Attribute | Details            |
+| --------- | ------------------ |
+| Input     | Complaint ID       |
+| Output    | Resolved complaint |
+| Purpose   | Resolve complaint  |
+
+
+* assign_compensation()
+| Attribute | Details            |
+| --------- | ------------------ |
+| Input     | Complaint ID       |
+| Output    | Compensation       |
+| Purpose   | Store compensation |
+
+** report_service.py
+* generate_monthly_report()
+
+| Attribute | Details         |
+| --------- | --------------- |
+| Input     | Month           |
+| Output    | PDF             |
+| Purpose   | Generate report |
+
+
+## API Modules
+
+The following API modules will contain route handlers for their respective functionalities:
+
+| API Module          |
+| ------------------- |
+| customer_api.py     |
+| subscription_api.py |
+| meal_api.py         |
+| addon_api.py        |
+| delivery_api.py     |
+| billing_api.py      |
+| complaint_api.py    |
+| report_api.py       |
+
+Purpose:
+Each file contains route handlers for its respective module.
+
+## Database Models Summary
+
+| Database Model |
+| -------------- |
+| Customer       |
+| Plan           |
+| Subscription   |
+| Delivery       |
+| Payment        |
+| Complaint      |
+| AddOn          |
+| Report         |
+| Route          |
+| DeliveryBoy    |
+| Referral       |
+| PauseHistory   |
+| Bill           |
+
+
+
+
