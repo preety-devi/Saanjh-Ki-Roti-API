@@ -83,7 +83,8 @@ Cancel subscriptions
 * Business rules:
 Maximum 7 pause days per billing cycle,
 Unused pause days do not carry forward,
-Paused days should not be counted in meal preparation
+Paused days should not be counted in meal preparation,
+A customer cannot have more than one active subscription simultaneously.
 
 3. Daily Meal Planning
 
@@ -356,7 +357,7 @@ Fields
 | diet_type     | str      |
 | document_path | str      |
 | created_at    | datetime |
-
+| route_id      | int      |
 Purpose:
 Stores customer information.
 
