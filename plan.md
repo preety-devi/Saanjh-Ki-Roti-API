@@ -20,6 +20,24 @@ Complaint tracking through WhatsApp and phone calls
 Lack of business analytics and reporting
 
 The system should automate these processes while remaining simple enough for a small family-run business.
+## Technology Stack
+
+- Backend Framework: FastAPI
+- Database: PostgreSQL
+- ORM: SQLAlchemy
+- Database Migration Tool: Alembic
+- Authentication: JWT
+
+### Database Initialization
+
+When a new developer clones the repository:
+
+1. Install dependencies from requirements.txt
+2. Configure environment variables
+3. Run Alembic migrations
+4. Start FastAPI server
+
+All database tables will be created through Alembic migration scripts.
 
 ## Key Stakeholders
 
@@ -139,7 +157,25 @@ Second failure marks the meal as missed
 
 Delivery boys should only access their assigned route.
 
-6. Billing and Payments
+6. Delivery Retry Handling
+
+
+Failed deliveries remain in the same Delivery record.
+
+When status changes to Failed:
+
+- retry_count becomes 1
+- retry_scheduled_at is set to 8:00 PM
+
+If retry succeeds:
+status = Delivered
+
+If retry fails:
+status = Missed
+
+No additional Delivery rows are created.
+
+7. Billing and Payments
 The system should generate bills automatically.
 
 * Billing schedules:
@@ -158,7 +194,7 @@ Weekly subscribers -> Every Monday
 Payment reminders sent 5 days before due date,
 Subscription auto-pauses after 10 days of non-payment
 
-7. Complaint Management
+8. Complaint Management
 
 * Customers should be able to raise complaints.
 Supported complaint categories:
@@ -184,7 +220,7 @@ Compensation details
 | High     | 6 Hours         |
 
 
-8. Dashboard
+9. Dashboard
 The owner should have access to a dashboard displaying:
 
 * Daily Operations
@@ -203,7 +239,7 @@ Open complaints,
 Resolved complaints,
 Complaint trends
 
-9. Reporting
+10. Reporting
 
 The system should generate a monthly PDF report containing:
 - Total customers served
@@ -247,6 +283,14 @@ Easy dashboard navigation
 * Existing subscribers keep their plan price until the next billing cycle if prices change.
 * Delivery retries happen only once.
 
+## Pause Tracking
+
+- PauseHistory is the authoritative source of pause information.
+
+- Subscription.paused_days is a derived value calculated from PauseHistory records.
+
+- Monthly reports and pause analytics will always use PauseHistory records.
+
 
 ## Things That Can Go Wrong
 - Duplicate customer registration.
@@ -259,6 +303,27 @@ Easy dashboard navigation
 - Route reassignment becomes necessary.
 - Customer cancels during an active billing period.
 - Delivery status not updated by delivery staff.
+
+
+## Edge Case Handling Decisions
+
+### Duplicate Phone Number
+
+The system will reject customer creation if the phone number already exists.
+
+### Plan Price Change During Active Subscription
+
+Each subscription stores a price_snapshot value.
+
+Billing uses the stored price_snapshot instead of the current Plan price.
+
+Existing customers keep their current price until renewal.
+
+### Delivery Boy Leaves Mid-Day
+
+The owner can manually reassign pending deliveries to another delivery boy.
+
+Until reassignment, deliveries remain pending under the current assignment.
 
 ## Implementation Plan
 
@@ -273,6 +338,30 @@ Easy dashboard navigation
 | Phase 7 | Billing Module        | Bill generation, Payment tracking, Discounts, Auto pause                          | Billing workflow completed        |
 | Phase 8 | Complaint Module      | Complaint creation, Resolution workflow, Compensation tracking                    | Complaint management completed    |
 | Phase 9 | Dashboard & Reports   | Dashboard APIs, PDF report generation                                             | Analytics completed               |
+
+## Definition of Done (V1)
+
+The project will be considered complete when:
+
+1. Authentication and role-based access control are implemented.
+2. Customer CRUD APIs are functional.
+3. Subscription create, pause, resume, and cancel workflows work correctly.
+4. Daily meal planning excludes paused and expired subscriptions.
+5. Delivery tracking supports all defined statuses.
+6. Billing generation and payment tracking are functional.
+7. Complaint management and SLA tracking are implemented.
+8. Dashboard APIs provide operational and financial summaries.
+9. Monthly PDF reports can be generated and downloaded.
+10. Core business rules are covered by automated tests.
+11. API documentation is available through FastAPI Swagger.
+
+## Open Technical Question
+
+The requirements mention monthly report delivery through email.
+
+Clarification is required regarding whether Version 1 should support automatic email delivery through an email service provider or only downloadable PDF reports.
+
+This decision affects infrastructure planning, deployment configuration, and implementation effort.
 
 
 ## Folder Structure
@@ -299,6 +388,8 @@ saanjh_ki_roti_api/
 │   ├── utils/
 │   │
 │   ├── reports/
+|   |
+|   ├── middleware/
 │
 ├── uploads/
 │
@@ -369,13 +460,13 @@ Plan
 ```
 Fields
 
-| Field         | Type  |
-| ------------- | ----- |
-| id            | int   |
-| name          | str   |
-| price         | float |
-| meal_type     | str   |
-| duration_days | int   |
+| Field         | Type    |
+| ------------- | -----   |
+| id            | int     |
+| name          | str     |
+| price         | Decimal |
+| meal_type     | str     |
+| duration_days | int     |
 
 Purpose:
 Stores plan details.
@@ -388,15 +479,14 @@ Subscription
 ```
 Fields
 
-| Field       | Type |
-| ----------- | ---- |
-| id          | int  |
-| customer_id | int  |
-| plan_id     | int  |
-| start_date  | date |
-| end_date    | date |
-| status      | str  |
-| paused_days | int  |
+| id             | int      |
+| customer_id    | int      |
+| plan_id        | int      |
+| start_date     | date     |
+| end_date       | date     |
+| status         | str      |
+| paused_days    | int      |
+| price_snapshot | Decimal  |
 
 Purpose:
 Stores subscription information.
@@ -409,13 +499,13 @@ Delivery
 ```
 Fields
 
-| Field           | Type |
-| --------------- | ---- |
-| id              | int  |
-| customer_id     | int  |
-| route           | str  |
-| status          | str  |
-| delivery_boy_id | int  |
+| id                 | int      |
+| customer_id        | int      |
+| route              | str      |
+| status             | str      |
+| delivery_boy_id    | int      |
+| retry_count        | int      |
+| retry_scheduled_at | datetime |
 
 Purpose:
 Stores delivery records.
@@ -428,13 +518,13 @@ Payment
 ```
 Fields
 
-| Field          | Type     |
-| -------------- | -------- |
-| id             | int      |
-| customer_id    | int      |
-| amount         | float    |
-| payment_method | str      |
-| paid_at        | datetime |
+| Field          | Type      |
+| -------------- | --------  |
+| id             | int       |
+| customer_id    | int       |
+| amount         | Decimal   |
+| payment_method | str       |
+| paid_at        | datetime  |
 
 Purpose:
 Stores payment records
@@ -459,12 +549,192 @@ Fields
 Purpose:
 Stores complaints
 
+* PauseHistory.py
+### Class
+
+```python
+PauseHistory
+```
+Fields
+
+| Field           | Type     |
+| --------------- | -------- |
+| id              | int      |
+| subscription_id | int      |
+| pause_start     | date     |
+| pause_end       | date     |
+| pause_days      | int      |
+| created_at      | datetime |
+
+Purpose:
+
+Stores every pause request for auditing and reporting.
+
+* AddOn.py
+### Class
+
+```python
+AddOn
+```
+Fields
+
+| Field | Type    |
+| ----- | ------- |
+| id    | int     |
+| name  | str     |
+| price | Decimal |
+
+Purpose:
+
+Stores available add-on items that customers can order.
+
+
+* AddOnOrder.py
+
+### Class
+
+```python
+AddOnOrder
+```
+Fields
+
+| Field       | Type |
+| ----------- | ---- |
+| id          | int  |
+| customer_id | int  |
+| addon_id    | int  |
+| order_date  | date |
+| quantity    | int  |
+
+Purpose:
+
+Stores customer add-on requests.
+
+
+* Route.py
+
+### Class
+
+```python
+Route
+```
+Fields
+
+| Field | Type |
+| ----- | ---- |
+| id    | int  |
+| name  | str  |
+
+Purpose:
+
+Stores delivery route information.
+
+
+* DeliveryBoy.py
+
+### Class
+
+```python
+DeliveryBoy
+```
+
+Fields
+
+| Field    | Type |
+| -------- | ---- |
+| id       | int  |
+| name     | str  |
+| phone    | str  |
+| route_id | int  |
+| active   | bool |
+
+Purpose:
+
+Stores delivery staff information
+
+
+
+* Referral.py
+
+### Class
+
+```python
+Referral
+```
+
+Fields
+
+| Field                | Type    |
+| -------------------- | ------- |
+| id                   | int     |
+| referrer_customer_id | int     |
+| referred_customer_id | int     |
+| reward_amount        | Decimal |
+| reward_status        | str     |
+
+Purpose:
+
+Stores referral reward records.
+
+
+
+* Bill.py
+
+### Class
+
+```python
+Bill
+```
+
+Fields
+| Field           | Type     |
+| --------------- | -------- |
+| id              | int      |
+| customer_id     | int      |
+| billing_period  | str      |
+| total_amount    | Decimal  |
+| discount_amount | Decimal  |
+| final_amount    | Decimal  |
+| status          | str      |
+| generated_at    | datetime |
+
+Purpose:
+
+Stores generated billing records.
+
+
+
+* Report.py
+
+### Class
+
+```python
+Report
+```
+
+Fields
+
+| Field        | Type     |
+| ------------ | -------- |
+| id           | int      |
+| report_month | str      |
+| file_path    | str      |
+| generated_at | datetime |
+
+Purpose:
+
+Stores generated monthly report metadata
+
+
+
+
+
 
 ## SERVICES
 ** customer_service.py
 * create_customer()
 | Attribute | Details         |
-| --------- | --------------- |
+| --------- | ----------------|
 | Input     | Customer data   |
 | Output    | Customer object |
 | Purpose   | Create customer |
@@ -652,6 +922,7 @@ Each file contains route handlers for its respective module.
 | Payment        |
 | Complaint      |
 | AddOn          |
+| AddOnOrder     |
 | Report         |
 | Route          |
 | DeliveryBoy    |
