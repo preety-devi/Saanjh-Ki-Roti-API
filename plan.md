@@ -20,6 +20,7 @@ Complaint tracking through WhatsApp and phone calls
 Lack of business analytics and reporting
 
 The system should automate these processes while remaining simple enough for a small family-run business.
+
 ## Technology Stack
 
 - Backend Framework: FastAPI
@@ -220,6 +221,16 @@ Compensation details
 | High     | 6 Hours         |
 
 
+SLA deadlines are calculated when a complaint is created.
+
+Low severity    -> due_at = created_at + 48 hours
+Medium severity -> due_at = created_at + 24 hours
+High severity   -> due_at = created_at + 6 hours
+
+A complaint is considered overdue when:
+current_time > due_at
+and status != Resolved
+
 9. Dashboard
 The owner should have access to a dashboard displaying:
 
@@ -330,7 +341,7 @@ Until reassignment, deliveries remain pending under the current assignment.
 | Phase   | Module                | Tasks                                                                             | Deliverable                       |
 | ------- | --------------------- | --------------------------------------------------------------------------------- | --------------------------------- |
 | Phase 1 | Project Setup         | Create repository, Configure FastAPI, Configure database, Create folder structure | Project skeleton ready            |
-| Phase 2 | Authentication Module | Login API, JWT Authentication, Role permissions                                   | Secure access system              |
+| Phase 2 | Authentication Module | User management, Login API, JWT Authentication, Role permissions                  | Secure access system              |
 | Phase 3 | Customer Module       | Customer CRUD APIs, Document upload                                               | Customer management completed     |
 | Phase 4 | Subscription Module   | Plan APIs, Subscription APIs, Pause & Resume APIs                                 | Subscription management completed |
 | Phase 5 | Meal Planning Module  | Daily meal calculation, Diet wise summary                                         | Kitchen planning ready            |
@@ -449,8 +460,38 @@ Fields
 | document_path | str      |
 | created_at    | datetime |
 | route_id      | int      |
+| user_id       | int      |
+
 Purpose:
 Stores customer information.
+
+* User.py
+
+### Class
+
+```python
+User
+```
+| Field         | Type     |
+| ------------- | -------- |
+| id            | int      |
+| username      | str      |
+| password_hash | str      |
+| role          | str      |
+| active        | bool     |
+| created_at    | datetime |
+
+Purpose:
+
+Stores authentication credentials and role information used by JWT authentication.
+JWT tokens reference the User table.
+Customer and DeliveryBoy profiles are linked through user_id.
+Admin users authenticate directly through User records.
+
+Role Values:
+- Admin
+- DeliveryBoy
+- Customer
 
 * plan.py
 ### Class
@@ -536,15 +577,19 @@ Stores payment records
 Complaint
 ```
 Fields
+Complaint
 
-| Field       | Type |
-| ----------- | ---- |
-| id          | int  |
-| customer_id | int  |
-| type        | str  |
-| severity    | str  |
-| description | str  |
-| status      | str  |
+| Field       | Type     |
+| ----------- | -------- |
+| id          | int      |
+| customer_id | int      |
+| type        | str      |
+| severity    | str      |
+| description | str      |
+| status      | str      |
+| created_at  | datetime |
+| due_at      | datetime |
+| resolved_at | datetime |
 
 Purpose:
 Stores complaints
@@ -647,6 +692,7 @@ Fields
 | phone    | str  |
 | route_id | int  |
 | active   | bool |
+| user_id  | int  |
 
 Purpose:
 
@@ -875,6 +921,14 @@ Stores generated monthly report metadata
 | Output    | Resolved complaint |
 | Purpose   | Resolve complaint  |
 
+* is_overdue()
+
+| Attribute | Details                |
+| --------- | ---------------------- |
+| Input     | Complaint ID           |
+| Output    | Boolean                |
+| Purpose   | Check SLA violation    |
+
 
 * assign_compensation()
 | Attribute | Details            |
@@ -929,6 +983,7 @@ Each file contains route handlers for its respective module.
 | Referral       |
 | PauseHistory   |
 | Bill           |
+| User           |
 
 
 
