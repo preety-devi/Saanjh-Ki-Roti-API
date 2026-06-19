@@ -29,6 +29,19 @@ The system should automate these processes while remaining simple enough for a s
 - Database Migration Tool: Alembic
 - Authentication: JWT
 
+## Technology Stack Justification
+
+The original brief suggested SQLModel with SQLite for simplicity.
+
+This project uses PostgreSQL, SQLAlchemy, and Alembic because:
+
+- PostgreSQL provides better reliability and scalability for concurrent users.
+- SQLAlchemy offers mature ORM capabilities and greater flexibility for complex relationships.
+- Alembic provides version-controlled database migrations for schema evolution.
+- The architecture remains compatible with FastAPI and supports future business growth.
+
+The trade-off is additional setup complexity compared to SQLite, but it provides stronger production readiness.
+
 ### Database Initialization
 
 When a new developer clones the repository:
@@ -298,9 +311,11 @@ Easy dashboard navigation
 
 - PauseHistory is the authoritative source of pause information.
 
-- Subscription.paused_days is a derived value calculated from PauseHistory records.
+- Subscription does not store paused_days.
 
-- Monthly reports and pause analytics will always use PauseHistory records.
+- Current pause usage is calculated from PauseHistory records whenever required.
+
+- Monthly reports and pause analytics always use PauseHistory records.
 
 
 ## Things That Can Go Wrong
@@ -346,25 +361,50 @@ Until reassignment, deliveries remain pending under the current assignment.
 | Phase 4 | Subscription Module   | Plan APIs, Subscription APIs, Pause & Resume APIs                                 | Subscription management completed |
 | Phase 5 | Meal Planning Module  | Daily meal calculation, Diet wise summary                                         | Kitchen planning ready            |
 | Phase 6 | Delivery Module       | Route management, Delivery tracking, Retry handling                               | Delivery workflow completed       |
-| Phase 7 | Billing Module        | Bill generation, Payment tracking, Discounts, Auto pause                          | Billing workflow completed        |
+| Phase 7 | Billing Module        | Bill generation, Payment tracking, Discounts, Payment reminders,Auto pause        | Billing workflow completed        |
 | Phase 8 | Complaint Module      | Complaint creation, Resolution workflow, Compensation tracking                    | Complaint management completed    |
 | Phase 9 | Dashboard & Reports   | Dashboard APIs, PDF report generation                                             | Analytics completed               |
 
-## Definition of Done (V1)
+
+## Definition of Done (V1) — Testable Acceptance Criteria
+
 
 The project will be considered complete when:
 
-1. Authentication and role-based access control are implemented.
-2. Customer CRUD APIs are functional.
-3. Subscription create, pause, resume, and cancel workflows work correctly.
-4. Daily meal planning excludes paused and expired subscriptions.
-5. Delivery tracking supports all defined statuses.
-6. Billing generation and payment tracking are functional.
-7. Complaint management and SLA tracking are implemented.
-8. Dashboard APIs provide operational and financial summaries.
-9. Monthly PDF reports can be generated and downloaded.
-10. Core business rules are covered by automated tests.
-11. API documentation is available through FastAPI Swagger.
+1. Users can log in successfully and access only the features permitted by their role (Admin, Customer, or DeliveryBoy).
+
+2. The system prevents duplicate customer registration using the same phone number.
+
+3. A customer cannot have more than one active subscription at the same time.
+
+4. Subscription pause requests correctly enforce the maximum 7-day pause limit per billing cycle and maintain pause records in PauseHistory.
+
+5. Daily meal planning accurately excludes paused, expired, and auto-paused subscriptions from meal counts.
+
+6. Add-on requests submitted after the 9:00 AM cutoff are automatically rejected.
+
+7. Failed deliveries automatically schedule a single retry for 8:00 PM, and second failures are marked as missed deliveries.
+
+8. Bills are generated according to the defined billing schedules for both monthly and weekly plans.
+
+9. Early payments receive the applicable 10% discount and billing amounts are updated accordingly.
+
+10. Referral rewards are granted only after the referred customer completes their first paid month.
+
+11. Payment reminder notifications are generated 5 days before bill due dates.
+
+12. Subscriptions are automatically paused after 10 days of unpaid dues.
+
+13. Complaint SLA deadlines are calculated correctly and overdue complaints can be identified by the system.
+
+14. Dashboard APIs provide accurate operational, financial, and customer service summaries.
+
+15. Monthly PDF reports can be generated, stored, and downloaded successfully.
+
+16. Automated tests validate all major business rules and workflows.
+
+17. FastAPI Swagger documentation is available and reflects the implemented APIs.
+
 
 ## Open Technical Question
 
@@ -400,7 +440,7 @@ saanjh_ki_roti_api/
 │   │
 │   ├── reports/
 |   |
-|   ├── middleware/
+│   ├── middleware/
 │
 ├── uploads/
 │
@@ -526,7 +566,8 @@ Fields
 | start_date     | date     |
 | end_date       | date     |
 | status         | str      |
-| paused_days    | int      |
+| auto_paused    | bool     |
+| due_date       | date     |
 | price_snapshot | Decimal  |
 
 Purpose:
@@ -542,7 +583,8 @@ Fields
 
 | id                 | int      |
 | customer_id        | int      |
-| route              | str      |
+| route_id           | int      |
+| meal_slot          | str      |
 | status             | str      |
 | delivery_boy_id    | int      |
 | retry_count        | int      |
@@ -741,12 +783,36 @@ Fields
 | total_amount    | Decimal  |
 | discount_amount | Decimal  |
 | final_amount    | Decimal  |
+| due_date        | date     |
 | status          | str      |
 | generated_at    | datetime |
 
 Purpose:
 
 Stores generated billing records.
+
+
+* Notification.py
+
+### Class
+
+```python
+Notification
+```
+
+Fields
+
+| Field       | Type     |
+| ----------- | -------- |
+| id          | int      |
+| customer_id | int      |
+| type        | str      |
+| sent_at     | datetime |
+| status      | str      |
+
+Purpose:
+
+Stores payment reminder notifications and other customer notifications.
 
 
 
@@ -983,6 +1049,7 @@ Each file contains route handlers for its respective module.
 | Referral       |
 | PauseHistory   |
 | Bill           |
+| Notification   |
 | User           |
 
 
