@@ -21,26 +21,16 @@ Lack of business analytics and reporting
 
 The system should automate these processes while remaining simple enough for a small family-run business.
 
+
+
 ## Technology Stack
 
 - Backend Framework: FastAPI
-- Database: PostgreSQL
-- ORM: SQLAlchemy
-- Database Migration Tool: Alembic
+- Database: SQLite
+- ORM: SQLModel
 - Authentication: JWT
 
-## Technology Stack Justification
 
-The original brief suggested SQLModel with SQLite for simplicity.
-
-This project uses PostgreSQL, SQLAlchemy, and Alembic because:
-
-- PostgreSQL provides better reliability and scalability for concurrent users.
-- SQLAlchemy offers mature ORM capabilities and greater flexibility for complex relationships.
-- Alembic provides version-controlled database migrations for schema evolution.
-- The architecture remains compatible with FastAPI and supports future business growth.
-
-The trade-off is additional setup complexity compared to SQLite, but it provides stronger production readiness.
 
 ### Database Initialization
 
@@ -48,10 +38,9 @@ When a new developer clones the repository:
 
 1. Install dependencies from requirements.txt
 2. Configure environment variables
-3. Run Alembic migrations
-4. Start FastAPI server
+3. Start the FastAPI server
 
-All database tables will be created through Alembic migration scripts.
+Database tables will be created automatically by SQLModel during application startup.
 
 ## Key Stakeholders
 
@@ -559,7 +548,8 @@ Stores plan details.
 Subscription
 ```
 Fields
-
+| Field          | Type     |
+| -------------- | ---------|
 | id             | int      |
 | customer_id    | int      |
 | plan_id        | int      |
@@ -580,7 +570,8 @@ Stores subscription information.
 Delivery
 ```
 Fields
-
+| Field          | Type         |
+| -------------- | -------------|
 | id                 | int      |
 | customer_id        | int      |
 | route_id           | int      |
@@ -601,13 +592,14 @@ Payment
 ```
 Fields
 
-| Field          | Type      |
-| -------------- | --------  |
-| id             | int       |
-| customer_id    | int       |
-| amount         | Decimal   |
-| payment_method | str       |
-| paid_at        | datetime  |
+| Field          | Type            |
+| -------------- | ----------------|
+| id             | int             |
+| customer_id    | int             |
+| bill_id        | int (FK → Bill) |
+| amount         | Decimal         |
+| payment_method | str             |
+| paid_at        | datetime        |
 
 Purpose:
 Stores payment records
@@ -801,14 +793,15 @@ Notification
 ```
 
 Fields
-
-| Field       | Type     |
-| ----------- | -------- |
-| id          | int      |
-| customer_id | int      |
-| type        | str      |
-| sent_at     | datetime |
-| status      | str      |
+| Field           | Type     |
+| ----------------| -------- |
+| id              | int      |
+| customer_id     | int      |
+| bill_id         | int (FK → Bill, nullable)         |
+| subscription_id | int (FK → Subscription, nullable) |
+| type            | str      |
+| sent_at         | datetime |
+| status          | str      |
 
 Purpose:
 
@@ -966,11 +959,20 @@ Stores generated monthly report metadata
 | Purpose   | Apply discounts |
 
 * send_payment_reminder()
-| Attribute | Details       |
-| --------- | ------------- |
-| Input     | Customer ID   |
-| Output    | Notification  |
-| Purpose   | Send reminder |
+
+| Attribute | Details               |
+| --------- | --------------------- |
+| Input     | Bill ID               |
+| Output    | Notification          |
+| Purpose   | Send payment reminder |
+
+* settle_payment()
+
+| Attribute | Details                         |
+| --------- | ------------------------------- |
+| Input     | Bill ID + Payment details       |
+| Output    | Updated payment and bill        |
+| Purpose   | Link payment with bill and calculate discount |
 
 ** complaint_service.py
 * create_complaint()
@@ -1012,6 +1014,26 @@ Stores generated monthly report metadata
 | Output    | PDF             |
 | Purpose   | Generate report |
 
+** notification_service.py
+
+* create_notification()
+
+| Attribute | Details             |
+| --------- | ------------------- |
+| Input     | Notification data   |
+| Output    | Notification        |
+| Purpose   | Create notification |
+
+* prevent_duplicate_notification()
+
+| Attribute | Details                      |
+| --------- | ---------------------------- |
+| Input     | Bill ID + Notification Type  |
+| Output    | Boolean                      |
+| Purpose   | Prevent duplicate reminders  |
+
+Business Rule:
+Only one notification of the same type can be created for the same bill on a given day.
 
 ## API Modules
 
