@@ -958,6 +958,14 @@ Stores generated monthly report metadata
 | Output    | Updated bill    |
 | Purpose   | Apply discounts |
 
+* settle_payment()
+
+| Attribute | Details |
+| --------- | ------- |
+| Input | Bill ID + Payment details |
+| Output | Updated payment and bill |
+| Purpose | Retrieve the Bill using bill_id, use bill.due_date to determine early payment eligibility, apply discount, and settle the bill |
+
 * send_payment_reminder()
 
 | Attribute | Details               |
@@ -966,13 +974,8 @@ Stores generated monthly report metadata
 | Output    | Notification          |
 | Purpose   | Send payment reminder |
 
-* settle_payment()
 
-| Attribute | Details                         |
-| --------- | ------------------------------- |
-| Input     | Bill ID + Payment details       |
-| Output    | Updated payment and bill        |
-| Purpose   | Link payment with bill and calculate discount |
+
 
 ** complaint_service.py
 * create_complaint()
