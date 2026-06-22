@@ -376,7 +376,7 @@ The project will be considered complete when:
 
 8. Bills are generated according to the defined billing schedules for both monthly and weekly plans.
 
-9. Early payments receive the applicable 10% discount and billing amounts are updated accordingly.
+9. Early payments made before bill.due_date receive the applicable 10% discount and final_amount is updated.
 
 10. Referral rewards are granted only after the referred customer completes their first paid month.
 
@@ -831,13 +831,12 @@ Purpose:
 Stores generated monthly report metadata
 
 
-
-
-
-
 ## SERVICES
+
 ** customer_service.py
+
 * create_customer()
+
 | Attribute | Details         |
 | --------- | ----------------|
 | Input     | Customer data   |
@@ -845,6 +844,7 @@ Stores generated monthly report metadata
 | Purpose   | Create customer |
 
 * get_customer()
+
 | Attribute | Details        |
 | --------- | -------------- |
 | Input     | Customer ID    |
@@ -852,6 +852,7 @@ Stores generated monthly report metadata
 | Purpose   | Fetch customer |
 
 * update_customer()
+
 | Attribute | Details            |
 | --------- | ------------------ |
 | Input     | Customer ID + data |
@@ -859,6 +860,7 @@ Stores generated monthly report metadata
 | Purpose   | Update customer    |
 
 * delete_customer()
+
 | Attribute | Details             |
 | --------- | ------------------- |
 | Input     | Customer ID         |
@@ -866,7 +868,9 @@ Stores generated monthly report metadata
 | Purpose   | Deactivate customer |
 
 ** subscription_service.py
+
 * create_subscription()
+
 | Attribute | Details               |
 | --------- | --------------------- |
 | Input     | Customer ID + Plan ID |
@@ -874,6 +878,7 @@ Stores generated monthly report metadata
 | Purpose   | Create subscription   |
 
 * pause_subscription()
+
 | Attribute | Details             |
 | --------- | ------------------- |
 | Input     | Subscription ID     |
@@ -881,6 +886,7 @@ Stores generated monthly report metadata
 | Purpose   | Pause subscription  |
 
 * resume_subscription()
+
 | Attribute | Details             |
 | --------- | ------------------- |
 | Input     | Subscription ID     |
@@ -888,6 +894,7 @@ Stores generated monthly report metadata
 | Purpose   | Resume subscription |
 
 * validate_pause_limit()
+
 | Attribute | Details           |
 | --------- | ----------------- |
 | Input     | Subscription ID   |
@@ -895,7 +902,9 @@ Stores generated monthly report metadata
 | Purpose   | Check pause limit |
 
 ** meal_service.py
+
 * generate_daily_meal_count()
+
 | Attribute | Details               |
 | --------- | --------------------- |
 | Input     | Date                  |
@@ -903,7 +912,9 @@ Stores generated monthly report metadata
 | Purpose   | Calculate daily meals |
 
 ** addon_service.py
+
 * create_addon_order()
+
 | Attribute | Details               |
 | --------- | --------------------- |
 | Input     | Customer ID + Addon   |
@@ -911,6 +922,7 @@ Stores generated monthly report metadata
 | Purpose   | Create add-on request |
 
 * validate_cutoff_time()
+
 | Attribute | Details           |
 | --------- | ----------------- |
 | Input     | Current time      |
@@ -920,6 +932,7 @@ Stores generated monthly report metadata
 ** delivery_service.py
 
 * assign_delivery()
+
 | Attribute | Details             |
 | --------- | ------------------- |
 | Input     | Delivery ID         |
@@ -928,6 +941,7 @@ Stores generated monthly report metadata
 
 
 * update_status()
+
 | Attribute | Details                |
 | --------- | ---------------------- |
 | Input     | Delivery ID + Status   |
@@ -936,6 +950,7 @@ Stores generated monthly report metadata
 
 
 * retry_failed_delivery()
+
 | Attribute | Details          |
 | --------- | ---------------- |
 | Input     | Delivery ID      |
@@ -944,7 +959,9 @@ Stores generated monthly report metadata
 
 
 ** billing_service.py
+
 * generate_bill()
+
 | Attribute | Details       |
 | --------- | ------------- |
 | Input     | Customer ID   |
@@ -952,6 +969,7 @@ Stores generated monthly report metadata
 | Purpose   | Generate bill |
 
 * apply_discount()
+
 | Attribute | Details         |
 | --------- | --------------- |
 | Input     | Bill            |
@@ -978,7 +996,9 @@ Stores generated monthly report metadata
 
 
 ** complaint_service.py
+
 * create_complaint()
+
 | Attribute | Details          |
 | --------- | ---------------- |
 | Input     | Complaint data   |
@@ -986,6 +1006,7 @@ Stores generated monthly report metadata
 | Purpose   | Create complaint |
 
 * resolve_complaint()
+
 | Attribute | Details            |
 | --------- | ------------------ |
 | Input     | Complaint ID       |
@@ -1002,6 +1023,7 @@ Stores generated monthly report metadata
 
 
 * assign_compensation()
+
 | Attribute | Details            |
 | --------- | ------------------ |
 | Input     | Complaint ID       |
@@ -1009,6 +1031,7 @@ Stores generated monthly report metadata
 | Purpose   | Store compensation |
 
 ** report_service.py
+
 * generate_monthly_report()
 
 | Attribute | Details         |
