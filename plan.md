@@ -354,6 +354,11 @@ Until reassignment, deliveries remain pending under the current assignment.
 | Phase 8 | Complaint Module      | Complaint creation, Resolution workflow, Compensation tracking                    | Complaint management completed    |
 | Phase 9 | Dashboard & Reports   | Dashboard APIs, PDF report generation                                             | Analytics completed               |
 
+Billing and reminder generation are manually triggered by the admin.
+On the 1st day of the month, the owner runs bill generation from the dashboard.
+Reminder generation and overdue subscription checks are executed through administrative actions.
+Version 1 does not use background schedulers or cron jobs.
+
 
 ## Definition of Done (V1) — Testable Acceptance Criteria
 
@@ -522,6 +527,17 @@ Role Values:
 - DeliveryBoy
 - Customer
 
+API responses never return password_hash.
+
+Separate request and response schemas inside the schemas/ folder are used for API serialization.
+
+UserResponse excludes password_hash and only exposes:
+- id
+- username
+- role
+- active
+
+
 * plan.py
 ### Class
 
@@ -535,11 +551,19 @@ Fields
 | id            | int     |
 | name          | str     |
 | price         | Decimal |
-| meal_type     | str     |
+| diet_type     | str     |
 | duration_days | int     |
 
 Purpose:
 Stores plan details.
+
+diet_type represents:
+- VEG
+- NON_VEG
+- JAIN
+- DIABETIC
+
+
 
 * subscription.py
 ### Class
@@ -555,13 +579,20 @@ Fields
 | plan_id        | int      |
 | start_date     | date     |
 | end_date       | date     |
-| status         | str      |
+| status | SubscriptionStatus |
 | auto_paused    | bool     |
-| due_date       | date     |
 | price_snapshot | Decimal  |
 
 Purpose:
 Stores subscription information.
+
+Bill.due_date is the single source of truth for:
+- payment reminders
+- early payment discounts
+- overdue calculations
+- auto-pause after 10 days
+
+Subscription does not maintain a separate due_date.
 
 * delivery.py
 ### Class
@@ -575,8 +606,8 @@ Fields
 | id                 | int      |
 | customer_id        | int      |
 | route_id           | int      |
-| meal_slot          | str      |
-| status             | str      |
+| meal_slot          | str      |  [Lunch and Dinner slots ]
+| status | DeliveryStatus |
 | delivery_boy_id    | int      |
 | retry_count        | int      |
 | retry_scheduled_at | datetime |
@@ -598,7 +629,7 @@ Fields
 | customer_id    | int             |
 | bill_id        | int (FK → Bill) |
 | amount         | Decimal         |
-| payment_method | str             |
+| payment_method | PaymentMethod |
 | paid_at        | datetime        |
 
 Purpose:
@@ -620,13 +651,15 @@ Complaint
 | type        | str      |
 | severity    | str      |
 | description | str      |
-| status      | str      |
+| severity | ComplaintSeverity |
 | created_at  | datetime |
 | due_at      | datetime |
 | resolved_at | datetime |
+| compensation_type   | str      |
+| compensation_detail | str      |
 
 Purpose:
-Stores complaints
+Stores complaints and compensation decisions.
 
 * PauseHistory.py
 ### Class
@@ -829,6 +862,35 @@ Fields
 Purpose:
 
 Stores generated monthly report metadata
+
+## Enumerated Values
+
+Delivery.status:
+- PREPARED
+- OUT_FOR_DELIVERY
+- DELIVERED
+- FAILED
+- MISSED
+
+Subscription.status:
+- ACTIVE
+- PAUSED
+- CANCELLED
+- EXPIRED
+
+Complaint.severity:
+- LOW
+- MEDIUM
+- HIGH
+
+Payment.payment_method:
+- CASH
+- UPI
+- KHAATA
+
+Notification.type:
+- PAYMENT_REMINDER
+- AUTO_PAUSE
 
 
 ## SERVICES
