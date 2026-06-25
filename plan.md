@@ -495,6 +495,8 @@ Fields
 | created_at    | datetime |
 | route_id      | int      |
 | user_id       | int      |
+| active        | bool     |
+| updated_at    | datetime |
 
 Purpose:
 Stores customer information.
@@ -552,6 +554,7 @@ Fields
 | name          | str     |
 | price         | Decimal |
 | diet_type     | str     |
+| meal_slots    | str     |
 | duration_days | int     |
 
 Purpose:
@@ -562,6 +565,11 @@ diet_type represents:
 - NON_VEG
 - JAIN
 - DIABETIC
+
+meal_slots represents:
+- LUNCH
+- DINNER
+- BOTH
 
 
 
@@ -582,6 +590,7 @@ Fields
 | status | SubscriptionStatus |
 | auto_paused    | bool     |
 | price_snapshot | Decimal  |
+| created_at     | datetime |
 
 Purpose:
 Stores subscription information.
@@ -606,8 +615,8 @@ Fields
 | id                 | int      |
 | customer_id        | int      |
 | route_id           | int      |
-| meal_slot          | str      |  [Lunch and Dinner slots ]
-| status | DeliveryStatus |
+| meal_slot          | MealSlot |  [Lunch and Dinner slots ]
+| status             | DeliveryStatus |
 | delivery_boy_id    | int      |
 | retry_count        | int      |
 | retry_scheduled_at | datetime |
@@ -648,10 +657,10 @@ Complaint
 | ----------- | -------- |
 | id          | int      |
 | customer_id | int      |
-| type        | str      |
-| severity    | str      |
+| type        | ComplaintType |
 | description | str      |
-| severity | ComplaintSeverity |
+| severity    | ComplaintSeverity |
+| status      | ComplaintStatus |
 | created_at  | datetime |
 | due_at      | datetime |
 | resolved_at | datetime |
@@ -710,17 +719,18 @@ AddOnOrder
 ```
 Fields
 
-| Field       | Type |
-| ----------- | ---- |
-| id          | int  |
-| customer_id | int  |
-| addon_id    | int  |
-| order_date  | date |
-| quantity    | int  |
+| id           | int      |
+| customer_id  | int      |
+| addon_id     | int      |
+| order_date   | date     |
+| requested_at | datetime |
+| quantity     | int      |
 
 Purpose:
 
 Stores customer add-on requests.
+
+requested_at stores the exact add-on request time for 9:00 AM cutoff validation.
 
 
 * Route.py
@@ -809,8 +819,9 @@ Fields
 | discount_amount | Decimal  |
 | final_amount    | Decimal  |
 | due_date        | date     |
-| status          | str      |
+| status          | BillStatus |
 | generated_at    | datetime |
+| paid_at         | datetime (nullable) |
 
 Purpose:
 
@@ -832,7 +843,7 @@ Fields
 | customer_id     | int      |
 | bill_id         | int (FK → Bill, nullable)         |
 | subscription_id | int (FK → Subscription, nullable) |
-| type            | str      |
+| type | NotificationType    |
 | sent_at         | datetime |
 | status          | str      |
 
@@ -878,6 +889,13 @@ Subscription.status:
 - CANCELLED
 - EXPIRED
 
+Complaint.type:
+- LATE_DELIVERY
+- COLD_FOOD
+- WRONG_ORDER
+- MISSING_ITEMS
+- TASTE_ISSUES
+
 Complaint.severity:
 - LOW
 - MEDIUM
@@ -888,9 +906,33 @@ Payment.payment_method:
 - UPI
 - KHAATA
 
+Complaint.status:
+- OPEN
+- IN_PROGRESS
+- RESOLVED
+- REJECTED
+
+Bill.status:
+- PENDING
+- PAID
+- OVERDUE
+- PARTIALLY_PAID
+- CANCELLED
+
+MealSlot:
+- LUNCH
+- DINNER
+
 Notification.type:
 - PAYMENT_REMINDER
 - AUTO_PAUSE
+- DELIVERY_FAILED
+- COMPLAINT_RESOLVED
+
+Referral.reward_status:
+- PENDING
+- AWARDED
+
 
 
 ## SERVICES
@@ -1141,6 +1183,46 @@ The following API modules will contain route handlers for their respective funct
 Purpose:
 Each file contains route handlers for its respective module.
 
+## API Contracts
+
+### Authentication
+
+POST /auth/login
+Request: LoginRequest
+Response: TokenResponse
+Status Code: 200
+Authorization: Public
+
+### Customer
+
+POST /customers
+Request: CustomerCreate
+Response: CustomerResponse
+Status Code: 201
+Authorization: Admin
+
+GET /customers/{id}
+Response: CustomerResponse
+Status Code: 200
+Authorization: Admin
+
+### Subscription
+
+POST /subscriptions
+Request: SubscriptionCreate
+Response: SubscriptionResponse
+Status Code: 201
+Authorization: Admin
+
+### Complaint
+
+POST /complaints
+Request: ComplaintCreate
+Response: ComplaintResponse
+Status Code: 201
+Authorization: Customer
+
+
 ## Database Models Summary
 
 | Database Model |
@@ -1165,3 +1247,4 @@ Each file contains route handlers for its respective module.
 
 
 
+    
