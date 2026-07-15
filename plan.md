@@ -1,0 +1,1250 @@
+# Project: Saanjh Ki Roti API
+
+## Objective
+
+Build a FastAPI-based backend system for Saanjh Ki Roti, a home-cooked tiffin service, to manage customers, subscriptions, meal preparation, deliveries, billing, complaints, and reporting.
+
+The goal is to replace the current notebook-based process with a centralized system that reduces food wastage, improves operational efficiency, and provides better visibility into business performance.
+
+## Business Understanding
+
+Saanjh Ki Roti currently serves approximately 67 tiffins per day across multiple routes and diet categories.
+
+The major operational challenges are:
+
+Inaccurate daily cooking counts
+Manual tracking of subscription pauses
+Difficulty managing deliveries
+Manual billing and payment follow-up
+Complaint tracking through WhatsApp and phone calls
+Lack of business analytics and reporting
+
+The system should automate these processes while remaining simple enough for a small family-run business.
+
+
+
+## Technology Stack
+
+- Backend Framework: FastAPI
+- Database: SQLite
+- ORM: SQLModel
+- Authentication: JWT
+
+
+
+### Database Initialization
+
+When a new developer clones the repository:
+
+1. Install dependencies from requirements.txt
+2. Configure environment variables
+3. Start the FastAPI server
+
+Database tables will be created automatically by SQLModel during application startup.
+
+## Key Stakeholders
+
+* Business Owner (Saanjh)
+Responsible for:
+Customer management,
+Meal preparation,
+Billing oversight,
+Complaint resolution,
+Business reporting
+
+* Delivery Boys
+Responsible for:
+Delivering assigned tiffins,
+Updating delivery status,
+Reporting failed deliveries
+
+* Customers
+Responsible for:
+Managing subscriptions,
+Requesting pauses,
+Ordering add-ons,
+Making payments,
+Raising complaints
+
+## Project Requirements
+
+### Functional Requirements
+1. Customer Management
+
+* The system must allow:
+Customer registration,
+Customer profile updates,
+Customer search,
+Customer deactivation
+
+* Customer information should include:
+*Name
+*Phone number
+*Address
+*Diet preference
+*Route assignment
+*Identity document image
+The system should prevent duplicate customer records based on phone number.
+
+2. Subscription Management
+
+* The system must support:
+Monthly Veg Plan,
+Monthly Premium Plan,
+Weekly Saver Plan,
+Diabetic Special Plan
+
+* Customers should be able to:
+Subscribe,
+Renew,
+Pause,
+Resume,
+Cancel subscriptions
+
+* Business rules:
+Maximum 7 pause days per billing cycle,
+Unused pause days do not carry forward,
+Paused days should not be counted in meal preparation,
+A customer cannot have more than one active subscription simultaneously.
+
+3. Daily Meal Planning
+
+* Every morning the system should generate:
+Total tiffins required,
+Diet-wise breakdown,
+Plan-wise breakdown
+
+* Categories include:
+Veg,
+Non-Veg,
+Jain,
+Diabetic
+
+* The count should automatically exclude:
+Paused subscriptions,
+Expired subscriptions,
+Auto-paused subscriptions
+
+4. Add-On Management
+
+* Customers may order additional items such as:
+Extra Paneer,
+Raita,
+Salad,
+Kheer
+
+* Business Rule:
+Add-ons must be requested before 9:00 AM,
+Requests after cutoff should be rejected
+
+
+5. Delivery Management
+The system must support route-based deliveries.
+
+* Current routes:
+East Vijaynagar,
+West Vijaynagar,
+Indra Vihar
+
+* Each delivery should move through statuses:
+*Prepared
+*Out For Delivery
+*Delivered
+*Failed
+*Missed
+
+* Business Rules:
+Failed deliveries receive one retry,
+Retry occurs at 8 PM,
+Second failure marks the meal as missed
+
+Delivery boys should only access their assigned route.
+
+6. Delivery Retry Handling
+
+
+Failed deliveries remain in the same Delivery record.
+
+When status changes to Failed:
+
+- retry_count becomes 1
+- retry_scheduled_at is set to 8:00 PM
+
+If retry succeeds:
+status = Delivered
+
+If retry fails:
+status = Missed
+
+No additional Delivery rows are created.
+
+7. Billing and Payments
+The system should generate bills automatically.
+
+* Billing schedules:
+Monthly subscribers -> 1st of every month,
+Weekly subscribers -> Every Monday
+
+* Supported payment methods:
+-Cash
+-UPI
+-Khaata
+
+* Business Rules:
+
+10% discount for early payment,
+5% referral reward after referred customer completes first paid month,
+Payment reminders sent 5 days before due date,
+Subscription auto-pauses after 10 days of non-payment
+
+8. Complaint Management
+
+* Customers should be able to raise complaints.
+Supported complaint categories:
+Late Delivery,
+Cold Food,
+Wrong Order,
+Missing Items,
+Taste Issues
+
+* Each complaint should include:
+Description,
+Severity,
+Status,
+Resolution details,
+Compensation details
+
+
+* Resolution deadlines:
+| Severity | Resolution Time |
+| -------- | --------------- |
+| Low      | 48 Hours        |
+| Medium   | 24 Hours        |
+| High     | 6 Hours         |
+
+
+SLA deadlines are calculated when a complaint is created.
+
+Low severity    -> due_at = created_at + 48 hours
+Medium severity -> due_at = created_at + 24 hours
+High severity   -> due_at = created_at + 6 hours
+
+A complaint is considered overdue when:
+current_time > due_at
+and status != Resolved
+
+9. Dashboard
+The owner should have access to a dashboard displaying:
+
+* Daily Operations
+Total tiffins,
+Plan-wise count,
+Route-wise count,
+Delivery status summary
+
+* Financial Overview
+Outstanding payments,
+Revenue collected,
+Active subscriptions
+
+* Customer Service Overview
+Open complaints,
+Resolved complaints,
+Complaint trends
+
+10. Reporting
+
+The system should generate a monthly PDF report containing:
+- Total customers served
+- Total meals delivered
+- Revenue summary
+- Complaint summary
+- Pause statistics
+- Delivery performance statistics
+- Best performing delivery route
+- Delivery boy performance summary
+
+Reports should be accessible for download and email delivery.
+
+
+### Non-Functional Requirements
+* Security
+Role-based access control
+Secure authentication
+Protected document uploads
+
+* Reliability
+Accurate billing calculations
+Consistent delivery tracking
+Data validation
+
+* Scalability
+System should support:
+Additional routes
+More delivery staff
+New subscription plans
+
+* Usability
+Mobile-friendly APIs
+Simple workflows
+Easy dashboard navigation
+
+## Assumptions
+* Sunday is a non-operational day.
+* One customer can have only one active subscription at a time.
+* Phone number acts as the primary unique identifier.
+* Existing subscribers keep their plan price until the next billing cycle if prices change.
+* Delivery retries happen only once.
+
+## Pause Tracking
+
+- PauseHistory is the authoritative source of pause information.
+
+- Subscription does not store paused_days.
+
+- Current pause usage is calculated from PauseHistory records whenever required.
+
+- Monthly reports and pause analytics always use PauseHistory records.
+
+
+## Things That Can Go Wrong
+- Duplicate customer registration.
+- Plan price changes during active subscriptions.
+- Delivery boy leaves while deliveries are in progress.
+- Customer requests pause after meals are prepared.
+- Add-on requested after cutoff time.
+- Payment remains overdue beyond allowed limit.
+- Uploaded identity documents are missing or corrupted.
+- Route reassignment becomes necessary.
+- Customer cancels during an active billing period.
+- Delivery status not updated by delivery staff.
+
+
+## Edge Case Handling Decisions
+
+### Duplicate Phone Number
+
+The system will reject customer creation if the phone number already exists.
+
+### Plan Price Change During Active Subscription
+
+Each subscription stores a price_snapshot value.
+
+Billing uses the stored price_snapshot instead of the current Plan price.
+
+Existing customers keep their current price until renewal.
+
+### Delivery Boy Leaves Mid-Day
+
+The owner can manually reassign pending deliveries to another delivery boy.
+
+Until reassignment, deliveries remain pending under the current assignment.
+
+## Implementation Plan
+
+| Phase   | Module                | Tasks                                                                             | Deliverable                       |
+| ------- | --------------------- | --------------------------------------------------------------------------------- | --------------------------------- |
+| Phase 1 | Project Setup         | Create repository, Configure FastAPI, Configure database, Create folder structure | Project skeleton ready            |
+| Phase 2 | Authentication Module | User management, Login API, JWT Authentication, Role permissions                  | Secure access system              |
+| Phase 3 | Customer Module       | Customer CRUD APIs, Document upload                                               | Customer management completed     |
+| Phase 4 | Subscription Module   | Plan APIs, Subscription APIs, Pause & Resume APIs                                 | Subscription management completed |
+| Phase 5 | Meal Planning Module  | Daily meal calculation, Diet wise summary                                         | Kitchen planning ready            |
+| Phase 6 | Delivery Module       | Route management, Delivery tracking, Retry handling                               | Delivery workflow completed       |
+| Phase 7 | Billing Module        | Bill generation, Payment tracking, Discounts, Payment reminders,Auto pause        | Billing workflow completed        |
+| Phase 8 | Complaint Module      | Complaint creation, Resolution workflow, Compensation tracking                    | Complaint management completed    |
+| Phase 9 | Dashboard & Reports   | Dashboard APIs, PDF report generation                                             | Analytics completed               |
+
+Billing and reminder generation are manually triggered by the admin.
+On the 1st day of the month, the owner runs bill generation from the dashboard.
+Reminder generation and overdue subscription checks are executed through administrative actions.
+Version 1 does not use background schedulers or cron jobs.
+
+
+## Definition of Done (V1) — Testable Acceptance Criteria
+
+
+The project will be considered complete when:
+
+1. Users can log in successfully and access only the features permitted by their role (Admin, Customer, or DeliveryBoy).
+
+2. The system prevents duplicate customer registration using the same phone number.
+
+3. A customer cannot have more than one active subscription at the same time.
+
+4. Subscription pause requests correctly enforce the maximum 7-day pause limit per billing cycle and maintain pause records in PauseHistory.
+
+5. Daily meal planning accurately excludes paused, expired, and auto-paused subscriptions from meal counts.
+
+6. Add-on requests submitted after the 9:00 AM cutoff are automatically rejected.
+
+7. Failed deliveries automatically schedule a single retry for 8:00 PM, and second failures are marked as missed deliveries.
+
+8. Bills are generated according to the defined billing schedules for both monthly and weekly plans.
+
+9. Early payments made before bill.due_date receive the applicable 10% discount and final_amount is updated.
+
+10. Referral rewards are granted only after the referred customer completes their first paid month.
+
+11. Payment reminder notifications are generated 5 days before bill due dates.
+
+12. Subscriptions are automatically paused after 10 days of unpaid dues.
+
+13. Complaint SLA deadlines are calculated correctly and overdue complaints can be identified by the system.
+
+14. Dashboard APIs provide accurate operational, financial, and customer service summaries.
+
+15. Monthly PDF reports can be generated, stored, and downloaded successfully.
+
+16. Automated tests validate all major business rules and workflows.
+
+17. FastAPI Swagger documentation is available and reflects the implemented APIs.
+
+
+## Open Technical Question
+
+The requirements mention monthly report delivery through email.
+
+Clarification is required regarding whether Version 1 should support automatic email delivery through an email service provider or only downloadable PDF reports.
+
+This decision affects infrastructure planning, deployment configuration, and implementation effort.
+
+
+## Folder Structure
+
+saanjh_ki_roti_api/
+
+│
+├── app/
+│
+│   ├── api/
+│   │
+│   ├── models/
+│   │
+│   ├── schemas/
+│   │
+│   ├── services/
+│   │
+│   ├── repositories/
+│   │
+│   ├── core/
+│   │
+│   ├── database/
+│   │
+│   ├── utils/
+│   │
+│   ├── reports/
+|   |
+│   ├── middleware/
+│
+├── uploads/
+│
+├── tests/
+│
+├── requirements.txt
+│
+└── main.py
+
+
+## Files, Classes, Fields & Functions
+
+* main.py
+
+Purpose:
+Application entry point.
+
+Function: create_app()
+
+| Attribute | Details                     |
+| --------- | --------------------------- |
+| Input     | None                        |
+| Output    | FastAPI app                 |
+| Purpose   | Create application instance |
+
+
+* database/db.py
+
+Purpose:
+Database connection.
+
+Function: get_db()
+
+| Attribute | Details            |
+| --------- | ------------------ |
+| Input     | None               |
+| Output    | Database session   |
+| Purpose   | Provide DB session |
+
+
+## MODELS
+* customer.py
+### Class
+
+```python
+Customer
+```
+Fields
+
+| Field         | Type     |
+| ------------- | -------- |
+| id            | int      |
+| name          | str      |
+| phone         | str      |
+| address       | str      |
+| diet_type     | str      |
+| document_path | str      |
+| created_at    | datetime |
+| route_id      | int      |
+| user_id       | int      |
+| active        | bool     |
+| updated_at    | datetime |
+
+Purpose:
+Stores customer information.
+
+* User.py
+
+### Class
+
+```python
+User
+```
+| Field         | Type     |
+| ------------- | -------- |
+| id            | int      |
+| username      | str      |
+| password_hash | str      |
+| role          | str      |
+| active        | bool     |
+| created_at    | datetime |
+
+Purpose:
+
+Stores authentication credentials and role information used by JWT authentication.
+JWT tokens reference the User table.
+Customer and DeliveryBoy profiles are linked through user_id.
+Admin users authenticate directly through User records.
+
+Role Values:
+- Admin
+- DeliveryBoy
+- Customer
+
+API responses never return password_hash.
+
+Separate request and response schemas inside the schemas/ folder are used for API serialization.
+
+UserResponse excludes password_hash and only exposes:
+- id
+- username
+- role
+- active
+
+
+* plan.py
+### Class
+
+```python
+Plan
+```
+Fields
+
+| Field         | Type    |
+| ------------- | -----   |
+| id            | int     |
+| name          | str     |
+| price         | Decimal |
+| diet_type     | str     |
+| meal_slots    | str     |
+| duration_days | int     |
+
+Purpose:
+Stores plan details.
+
+diet_type represents:
+- VEG
+- NON_VEG
+- JAIN
+- DIABETIC
+
+meal_slots represents:
+- LUNCH
+- DINNER
+- BOTH
+
+
+
+* subscription.py
+### Class
+
+```python
+Subscription
+```
+Fields
+| Field          | Type     |
+| -------------- | ---------|
+| id             | int      |
+| customer_id    | int      |
+| plan_id        | int      |
+| start_date     | date     |
+| end_date       | date     |
+| status | SubscriptionStatus |
+| auto_paused    | bool     |
+| price_snapshot | Decimal  |
+| created_at     | datetime |
+
+Purpose:
+Stores subscription information.
+
+Bill.due_date is the single source of truth for:
+- payment reminders
+- early payment discounts
+- overdue calculations
+- auto-pause after 10 days
+
+Subscription does not maintain a separate due_date.
+
+* delivery.py
+### Class
+
+```python
+Delivery
+```
+Fields
+| Field          | Type         |
+| -------------- | -------------|
+| id                 | int      |
+| customer_id        | int      |
+| route_id           | int      |
+| meal_slot          | MealSlot |  [Lunch and Dinner slots ]
+| status             | DeliveryStatus |
+| delivery_boy_id    | int      |
+| retry_count        | int      |
+| retry_scheduled_at | datetime |
+
+Purpose:
+Stores delivery records.
+
+* payment.py
+### Class
+
+```python
+Payment
+```
+Fields
+
+| Field          | Type            |
+| -------------- | ----------------|
+| id             | int             |
+| customer_id    | int             |
+| bill_id        | int (FK → Bill) |
+| amount         | Decimal         |
+| payment_method | PaymentMethod |
+| paid_at        | datetime        |
+
+Purpose:
+Stores payment records
+
+* complaint.py
+### Class
+
+```python
+Complaint
+```
+Fields
+Complaint
+
+| Field       | Type     |
+| ----------- | -------- |
+| id          | int      |
+| customer_id | int      |
+| type        | ComplaintType |
+| description | str      |
+| severity    | ComplaintSeverity |
+| status      | ComplaintStatus |
+| created_at  | datetime |
+| due_at      | datetime |
+| resolved_at | datetime |
+| compensation_type   | str      |
+| compensation_detail | str      |
+
+Purpose:
+Stores complaints and compensation decisions.
+
+* PauseHistory.py
+### Class
+
+```python
+PauseHistory
+```
+Fields
+
+| Field           | Type     |
+| --------------- | -------- |
+| id              | int      |
+| subscription_id | int      |
+| pause_start     | date     |
+| pause_end       | date     |
+| pause_days      | int      |
+| created_at      | datetime |
+
+Purpose:
+
+Stores every pause request for auditing and reporting.
+
+* AddOn.py
+### Class
+
+```python
+AddOn
+```
+Fields
+
+| Field | Type    |
+| ----- | ------- |
+| id    | int     |
+| name  | str     |
+| price | Decimal |
+
+Purpose:
+
+Stores available add-on items that customers can order.
+
+
+* AddOnOrder.py
+
+### Class
+
+```python
+AddOnOrder
+```
+Fields
+
+| id           | int      |
+| customer_id  | int      |
+| addon_id     | int      |
+| order_date   | date     |
+| requested_at | datetime |
+| quantity     | int      |
+
+Purpose:
+
+Stores customer add-on requests.
+
+requested_at stores the exact add-on request time for 9:00 AM cutoff validation.
+
+
+* Route.py
+
+### Class
+
+```python
+Route
+```
+Fields
+
+| Field | Type |
+| ----- | ---- |
+| id    | int  |
+| name  | str  |
+
+Purpose:
+
+Stores delivery route information.
+
+
+* DeliveryBoy.py
+
+### Class
+
+```python
+DeliveryBoy
+```
+
+Fields
+
+| Field    | Type |
+| -------- | ---- |
+| id       | int  |
+| name     | str  |
+| phone    | str  |
+| route_id | int  |
+| active   | bool |
+| user_id  | int  |
+
+Purpose:
+
+Stores delivery staff information
+
+
+
+* Referral.py
+
+### Class
+
+```python
+Referral
+```
+
+Fields
+
+| Field                | Type    |
+| -------------------- | ------- |
+| id                   | int     |
+| referrer_customer_id | int     |
+| referred_customer_id | int     |
+| reward_amount        | Decimal |
+| reward_status        | str     |
+
+Purpose:
+
+Stores referral reward records.
+
+
+
+* Bill.py
+
+### Class
+
+```python
+Bill
+```
+
+Fields
+| Field           | Type     |
+| --------------- | -------- |
+| id              | int      |
+| customer_id     | int      |
+| billing_period  | str      |
+| total_amount    | Decimal  |
+| discount_amount | Decimal  |
+| final_amount    | Decimal  |
+| due_date        | date     |
+| status          | BillStatus |
+| generated_at    | datetime |
+| paid_at         | datetime (nullable) |
+
+Purpose:
+
+Stores generated billing records.
+
+
+* Notification.py
+
+### Class
+
+```python
+Notification
+```
+
+Fields
+| Field           | Type     |
+| ----------------| -------- |
+| id              | int      |
+| customer_id     | int      |
+| bill_id         | int (FK → Bill, nullable)         |
+| subscription_id | int (FK → Subscription, nullable) |
+| type | NotificationType    |
+| sent_at         | datetime |
+| status          | str      |
+
+Purpose:
+
+Stores payment reminder notifications and other customer notifications.
+
+
+
+* Report.py
+
+### Class
+
+```python
+Report
+```
+
+Fields
+
+| Field        | Type     |
+| ------------ | -------- |
+| id           | int      |
+| report_month | str      |
+| file_path    | str      |
+| generated_at | datetime |
+
+Purpose:
+
+Stores generated monthly report metadata
+
+## Enumerated Values
+
+Delivery.status:
+- PREPARED
+- OUT_FOR_DELIVERY
+- DELIVERED
+- FAILED
+- MISSED
+
+Subscription.status:
+- ACTIVE
+- PAUSED
+- CANCELLED
+- EXPIRED
+
+Complaint.type:
+- LATE_DELIVERY
+- COLD_FOOD
+- WRONG_ORDER
+- MISSING_ITEMS
+- TASTE_ISSUES
+
+Complaint.severity:
+- LOW
+- MEDIUM
+- HIGH
+
+Payment.payment_method:
+- CASH
+- UPI
+- KHAATA
+
+Complaint.status:
+- OPEN
+- IN_PROGRESS
+- RESOLVED
+- REJECTED
+
+Bill.status:
+- PENDING
+- PAID
+- OVERDUE
+- PARTIALLY_PAID
+- CANCELLED
+
+MealSlot:
+- LUNCH
+- DINNER
+
+Notification.type:
+- PAYMENT_REMINDER
+- AUTO_PAUSE
+- DELIVERY_FAILED
+- COMPLAINT_RESOLVED
+
+Referral.reward_status:
+- PENDING
+- AWARDED
+
+
+
+## SERVICES
+
+** customer_service.py
+
+* create_customer()
+
+| Attribute | Details         |
+| --------- | ----------------|
+| Input     | Customer data   |
+| Output    | Customer object |
+| Purpose   | Create customer |
+
+* get_customer()
+
+| Attribute | Details        |
+| --------- | -------------- |
+| Input     | Customer ID    |
+| Output    | Customer       |
+| Purpose   | Fetch customer |
+
+* update_customer()
+
+| Attribute | Details            |
+| --------- | ------------------ |
+| Input     | Customer ID + data |
+| Output    | Updated customer   |
+| Purpose   | Update customer    |
+
+* delete_customer()
+
+| Attribute | Details             |
+| --------- | ------------------- |
+| Input     | Customer ID         |
+| Output    | Success message     |
+| Purpose   | Deactivate customer |
+
+** subscription_service.py
+
+* create_subscription()
+
+| Attribute | Details               |
+| --------- | --------------------- |
+| Input     | Customer ID + Plan ID |
+| Output    | Subscription          |
+| Purpose   | Create subscription   |
+
+* pause_subscription()
+
+| Attribute | Details             |
+| --------- | ------------------- |
+| Input     | Subscription ID     |
+| Output    | Paused subscription |
+| Purpose   | Pause subscription  |
+
+* resume_subscription()
+
+| Attribute | Details             |
+| --------- | ------------------- |
+| Input     | Subscription ID     |
+| Output    | Active subscription |
+| Purpose   | Resume subscription |
+
+* validate_pause_limit()
+
+| Attribute | Details           |
+| --------- | ----------------- |
+| Input     | Subscription ID   |
+| Output    | Boolean           |
+| Purpose   | Check pause limit |
+
+** meal_service.py
+
+* generate_daily_meal_count()
+
+| Attribute | Details               |
+| --------- | --------------------- |
+| Input     | Date                  |
+| Output    | Meal summary          |
+| Purpose   | Calculate daily meals |
+
+** addon_service.py
+
+* create_addon_order()
+
+| Attribute | Details               |
+| --------- | --------------------- |
+| Input     | Customer ID + Addon   |
+| Output    | Addon order           |
+| Purpose   | Create add-on request |
+
+* validate_cutoff_time()
+
+| Attribute | Details           |
+| --------- | ----------------- |
+| Input     | Current time      |
+| Output    | Boolean           |
+| Purpose   | Check 9 AM cutoff |
+
+** delivery_service.py
+
+* assign_delivery()
+
+| Attribute | Details             |
+| --------- | ------------------- |
+| Input     | Delivery ID         |
+| Output    | Assigned delivery   |
+| Purpose   | Assign delivery boy |
+
+
+* update_status()
+
+| Attribute | Details                |
+| --------- | ---------------------- |
+| Input     | Delivery ID + Status   |
+| Output    | Updated delivery       |
+| Purpose   | Update delivery status |
+
+
+* retry_failed_delivery()
+
+| Attribute | Details          |
+| --------- | ---------------- |
+| Input     | Delivery ID      |
+| Output    | Updated delivery |
+| Purpose   | Schedule retry   |
+
+
+** billing_service.py
+
+* generate_bill()
+
+| Attribute | Details       |
+| --------- | ------------- |
+| Input     | Customer ID   |
+| Output    | Bill          |
+| Purpose   | Generate bill |
+
+* apply_discount()
+
+| Attribute | Details         |
+| --------- | --------------- |
+| Input     | Bill            |
+| Output    | Updated bill    |
+| Purpose   | Apply discounts |
+
+* settle_payment()
+
+| Attribute | Details |
+| --------- | ------- |
+| Input | Bill ID + Payment details |
+| Output | Updated payment and bill |
+| Purpose | Retrieve the Bill using bill_id, use bill.due_date to determine early payment eligibility, apply discount, and settle the bill |
+
+* send_payment_reminder()
+
+| Attribute | Details               |
+| --------- | --------------------- |
+| Input     | Bill ID               |
+| Output    | Notification          |
+| Purpose   | Send payment reminder |
+
+
+
+
+** complaint_service.py
+
+* create_complaint()
+
+| Attribute | Details          |
+| --------- | ---------------- |
+| Input     | Complaint data   |
+| Output    | Complaint        |
+| Purpose   | Create complaint |
+
+* resolve_complaint()
+
+| Attribute | Details            |
+| --------- | ------------------ |
+| Input     | Complaint ID       |
+| Output    | Resolved complaint |
+| Purpose   | Resolve complaint  |
+
+* is_overdue()
+
+| Attribute | Details                |
+| --------- | ---------------------- |
+| Input     | Complaint ID           |
+| Output    | Boolean                |
+| Purpose   | Check SLA violation    |
+
+
+* assign_compensation()
+
+| Attribute | Details            |
+| --------- | ------------------ |
+| Input     | Complaint ID       |
+| Output    | Compensation       |
+| Purpose   | Store compensation |
+
+** report_service.py
+
+* generate_monthly_report()
+
+| Attribute | Details         |
+| --------- | --------------- |
+| Input     | Month           |
+| Output    | PDF             |
+| Purpose   | Generate report |
+
+** notification_service.py
+
+* create_notification()
+
+| Attribute | Details             |
+| --------- | ------------------- |
+| Input     | Notification data   |
+| Output    | Notification        |
+| Purpose   | Create notification |
+
+* prevent_duplicate_notification()
+
+| Attribute | Details                      |
+| --------- | ---------------------------- |
+| Input     | Bill ID + Notification Type  |
+| Output    | Boolean                      |
+| Purpose   | Prevent duplicate reminders  |
+
+Business Rule:
+Only one notification of the same type can be created for the same bill on a given day.
+
+## API Modules
+
+The following API modules will contain route handlers for their respective functionalities:
+
+| API Module          |
+| ------------------- |
+| customer_api.py     |
+| subscription_api.py |
+| meal_api.py         |
+| addon_api.py        |
+| delivery_api.py     |
+| billing_api.py      |
+| complaint_api.py    |
+| report_api.py       |
+
+Purpose:
+Each file contains route handlers for its respective module.
+
+## API Contracts
+
+### Authentication
+
+POST /auth/login
+Request: LoginRequest
+Response: TokenResponse
+Status Code: 200
+Authorization: Public
+
+### Customer
+
+POST /customers
+Request: CustomerCreate
+Response: CustomerResponse
+Status Code: 201
+Authorization: Admin
+
+GET /customers/{id}
+Response: CustomerResponse
+Status Code: 200
+Authorization: Admin
+
+### Subscription
+
+POST /subscriptions
+Request: SubscriptionCreate
+Response: SubscriptionResponse
+Status Code: 201
+Authorization: Admin
+
+### Complaint
+
+POST /complaints
+Request: ComplaintCreate
+Response: ComplaintResponse
+Status Code: 201
+Authorization: Customer
+
+
+## Database Models Summary
+
+| Database Model |
+| -------------- |
+| Customer       |
+| Plan           |
+| Subscription   |
+| Delivery       |
+| Payment        |
+| Complaint      |
+| AddOn          |
+| AddOnOrder     |
+| Report         |
+| Route          |
+| DeliveryBoy    |
+| Referral       |
+| PauseHistory   |
+| Bill           |
+| Notification   |
+| User           |
+
+
+
+
+    
